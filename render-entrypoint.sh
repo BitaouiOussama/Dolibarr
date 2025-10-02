@@ -13,4 +13,6 @@ fi
 export DOLI_DB_SSL_CA=/ca.pem
 
 # Exécuter l’entrypoint original de Dolibarr
-exec /entrypoint.sh apache2-foreground
+# exec /entrypoint.sh apache2-foreground
+exec /entrypoint.sh "$@"
+

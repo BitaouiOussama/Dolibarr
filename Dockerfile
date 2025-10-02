@@ -11,4 +11,6 @@ RUN chmod +x /render-entrypoint.sh
 WORKDIR /var/www/html
 
 # Lance le script au démarrage
+# ENTRYPOINT ["/render-entrypoint.sh"]
 ENTRYPOINT ["/render-entrypoint.sh"]
+
