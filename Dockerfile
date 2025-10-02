@@ -20,6 +20,10 @@
 # Base image officielle Dolibarr
 FROM dolibarr/dolibarr:22
 
+RUN mkdir -p /var/www/html/htdocs/conf \
+    && chown www-data:www-data /var/www/html/htdocs/conf \
+    && chmod 750 /var/www/html/htdocs/conf
+
 # Copier le fichier de configuration Dolibarr
 COPY conf.php /var/www/html/htdocs/conf/conf.php
 
