@@ -1,13 +1,14 @@
-# Base image Dolibarr
+# Utilise l’image officielle Dolibarr
 FROM dolibarr/dolibarr:22
 
-# Variables d'environnement pour la connexion MySQL
-ENV DOLI_DB_HOST=db4free.net
-ENV DOLI_DB_PORT=3306
-ENV DOLI_DB_NAME=dolibarr
-ENV DOLI_DB_USER=dolibarruser
-ENV DOLI_DB_PASSWORD=
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/htdocs
+# Copie notre script d’entrypoint personnalisé
+COPY render-entrypoint.sh /render-entrypoint.sh
 
-# Expose le port 80 pour le service web
-EXPOSE 80
+# Donner les permissions d’exécution
+RUN chmod +x /render-entrypoint.sh
+
+# Dossier de travail
+WORKDIR /var/www/html
+
+# Lance le script au démarrage
+ENTRYPOINT ["/render-entrypoint.sh"]
