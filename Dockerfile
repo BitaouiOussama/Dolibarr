@@ -1,16 +1,14 @@
-# Utilise l’image officielle Dolibarr
+# Base image Dolibarr
 FROM dolibarr/dolibarr:22
 
-# Copie notre script d’entrypoint personnalisé
+# Copier le script d'entrypoint
 COPY render-entrypoint.sh /render-entrypoint.sh
 
-# Donner les permissions d’exécution
+# Donner les droits d'exécution
 RUN chmod +x /render-entrypoint.sh
 
-# Dossier de travail
-WORKDIR /var/www/html
-
-# Lance le script au démarrage
-# ENTRYPOINT ["/render-entrypoint.sh"]
+# Définir le script comme entrypoint
 ENTRYPOINT ["/render-entrypoint.sh"]
 
+# Exposer le port 80
+EXPOSE 80
