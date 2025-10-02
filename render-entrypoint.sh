@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 # Vérifier que la variable contenant le certificat existe
 if [ -n "$MYSQL_SSL_CA" ]; then
@@ -9,10 +8,5 @@ else
     echo "⚠️ No SSL certificate found in MYSQL_SSL_CA"
 fi
 
-# Exporter la variable pour Dolibarr
-export DOLI_DB_SSL_CA=/ca.pem
-
-# Exécuter l’entrypoint original de Dolibarr
-# exec /entrypoint.sh apache2-foreground
-exec /entrypoint.sh "$@"
-
+# Lancer Apache (comme le ferait l’image officielle)
+exec apache2-foreground
