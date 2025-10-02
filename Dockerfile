@@ -2,10 +2,10 @@
 FROM dolibarr/dolibarr:22
 
 # Variables d'environnement pour la connexion MySQL
-ENV DOLI_DB_HOST=dolibarr-dolibarr-1010.k.aivencloud.com
-ENV DOLI_DB_PORT=17031
-ENV DOLI_DB_NAME=defaultdb
-ENV DOLI_DB_USER=avnadmin
+ENV DOLI_DB_HOST=db4free.net
+ENV DOLI_DB_PORT=3306
+ENV DOLI_DB_NAME=dolibarr
+ENV DOLI_DB_USER=dolibarruser
 ENV DOLI_DB_PASSWORD=
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/htdocs
 
