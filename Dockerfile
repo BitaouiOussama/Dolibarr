@@ -17,14 +17,19 @@
 ###########################################################################
 
 
-# Utilise l’image officielle Dolibarr
+# Base image officielle Dolibarr
 FROM dolibarr/dolibarr:22
 
-# Copier le script d'initialisation
-COPY render-entrypoint.sh /usr/local/bin/render-entrypoint.sh
+# Copier le fichier de configuration Dolibarr
+COPY conf.php /var/www/html/htdocs/conf/conf.php
 
-# Donner les droits d'exécution
-RUN chmod +x /usr/local/bin/render-entrypoint.sh
+# Définir le propriétaire et les permissions pour Apache
+RUN chown www-data:www-data /var/www/html/htdocs/conf/conf.php \
+    && chmod 640 /var/www/html/htdocs/conf/conf.php
+
+# Copier le certificat SSL (déjà en base64 dans l'environnement Render)
+COPY render-entrypoint.sh /render-entrypoint.sh
+RUN chmod +x /render-entrypoint.sh
 
 # Définir le dossier de travail
 WORKDIR /var/www/html
@@ -32,19 +37,5 @@ WORKDIR /var/www/html
 # Exposer le port web
 EXPOSE 80
 
-# Variables par défaut (modifiable depuis Render)
-ENV DOLI_DB_TYPE=mysqli \
-    DOLI_DB_SSL=1 \
-    DOLI_URL_ROOT=https://dolibarr-68ch.onrender.com \
-    DOLI_AUTH=dolibarr \
-    DOLI_INSTALL_AUTO=1 \
-    DOLI_PROD=1 \
-    DOLI_ADMIN_USER=admin \
-    DOLI_ADMIN_PASS=admin123 \
-    DOLI_ADMIN_MAIL=admin@example.com
-
-# Entrypoint personnalisé
-ENTRYPOINT ["/usr/local/bin/render-entrypoint.sh"]
-
-# CMD par défaut
-CMD ["apache2-foreground"]
+# Entrypoint personnalisé pour gérer le certificat SSL
+ENTRYPOINT ["/render-entrypoint.sh"]
