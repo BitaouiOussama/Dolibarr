@@ -21,7 +21,7 @@ export DOLI_DB_HOST="${DOLI_DB_HOST}"
 export DOLI_DB_USER="${DOLI_DB_USER}" 
 export DOLI_DB_PASS="${DOLI_DB_PASS}"
 export DOLI_DB_NAME="${DOLI_DB_NAME}"
-export DOLI_DB_HOST_PORT="${DOLI_DB_PORT:-17031}"
+export DOLI_DB_HOST_PORT="${DOLI_DB_PORT:-25060}"
 export DOLI_DB_TYPE="${DOLI_DB_TYPE:-mysqli}"
 export DOLI_INSTALL_AUTO="${DOLI_INSTALL_AUTO:-1}"
 export DOLI_PROD="${DOLI_PROD:-1}"
@@ -37,11 +37,22 @@ pdo_mysql.default_socket = ""
 EOF
 fi
 
-# 4️⃣ Créer la configuration Dolibarr en avance
+# 4️⃣ Créer la configuration Dolibarr en avance avec les bonnes permissions
 echo "📄 Creating Dolibarr configuration directory..."
 mkdir -p /var/www/html/htdocs/conf
+
+# Créer le fichier conf.php avec les bonnes permissions
+touch /var/www/html/htdocs/conf/conf.php
 chown -R www-data:www-data /var/www/html/htdocs/conf
-chmod 755 /var/www/html/htdocs/conf
+chmod 775 /var/www/html/htdocs/conf
+chmod 666 /var/www/html/htdocs/conf/conf.php
+
+# Créer aussi le répertoire documents
+mkdir -p /var/www/documents
+chown -R www-data:www-data /var/www/documents
+chmod 775 /var/www/documents
+
+echo "✅ Directories and permissions configured"
 
 # 5️⃣ DÉMARRER APACHE IMMÉDIATEMENT (avant le test de connexion)
 echo "🌐 Starting Apache web server..."
