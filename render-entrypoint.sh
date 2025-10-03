@@ -49,9 +49,14 @@ cat > /var/www/html/htdocs/conf/conf.php << 'EOF'
 EOF
 
 # Donner les permissions maximales
+chown -R www-data:www-data /var/www/html
+chown -R www-data:www-data /var/www/html/htdocs
 chown -R www-data:www-data /var/www/html/htdocs/conf
+chown -R www-data:www-data /var/www/html/htdocs/conf/conf.php
+chmod 777 /var/www/html
+chmod 777 /var/www/html/htdocs
 chmod 777 /var/www/html/htdocs/conf
-chmod 666 /var/www/html/htdocs/conf/conf.php
+chmod 777 /var/www/html/htdocs/conf/conf.php
 
 # Créer aussi le répertoire documents
 mkdir -p /var/www/documents
