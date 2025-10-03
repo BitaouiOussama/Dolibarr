@@ -40,4 +40,4 @@ echo "✅ Database configuration check passed"
 
 # 3️⃣ Call the original Dolibarr entrypoint
 echo "📦 Starting original Dolibarr entrypoint..."
-exec /docker-php-entrypoint "$@"
+exec /usr/local/bin/docker-run.sh "$@"
