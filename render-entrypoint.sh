@@ -41,16 +41,30 @@ fi
 echo "📄 Creating Dolibarr configuration directory..."
 mkdir -p /var/www/html/htdocs/conf
 
-# Créer le fichier conf.php avec les bonnes permissions
-touch /var/www/html/htdocs/conf/conf.php
+# Créer le fichier conf.php avec du contenu initial
+cat > /var/www/html/htdocs/conf/conf.php << 'EOF'
+<?php
+// Dolibarr configuration file
+// This file will be completed by Dolibarr install process
+EOF
+
+# Donner les permissions maximales
 chown -R www-data:www-data /var/www/html/htdocs/conf
-chmod 775 /var/www/html/htdocs/conf
+chmod 777 /var/www/html/htdocs/conf
 chmod 666 /var/www/html/htdocs/conf/conf.php
 
 # Créer aussi le répertoire documents
 mkdir -p /var/www/documents
 chown -R www-data:www-data /var/www/documents
-chmod 775 /var/www/documents
+chmod 777 /var/www/documents
+
+# Vérifier que le fichier existe bien
+if [ -f "/var/www/html/htdocs/conf/conf.php" ]; then
+    echo "✅ conf.php created successfully"
+    ls -la /var/www/html/htdocs/conf/conf.php
+else
+    echo "❌ Failed to create conf.php"
+fi
 
 echo "✅ Directories and permissions configured"
 
