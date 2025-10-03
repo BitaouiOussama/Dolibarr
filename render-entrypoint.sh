@@ -54,7 +54,23 @@ chmod 775 /var/www/documents
 
 echo "✅ Directories and permissions configured"
 
-# 5️⃣ DÉMARRER APACHE IMMÉDIATEMENT (avant le test de connexion)
+# 5️⃣ Option pour forcer la création du fichier conf.php avec du contenu initial
+if [ "$DOLI_INSTALL_FORCE_CREATE_CONF" = "1" ]; then
+    echo "🔧 Force creating conf.php with initial configuration..."
+    cat > /var/www/html/htdocs/conf/conf.php << EOF
+<?php
+// Dolibarr configuration file
+// This file will be completed by Dolibarr install process
+\$dolibarr_main_url_root='${DOLI_URL_ROOT:-https://dolibarr-68ch.onrender.com}';
+\$dolibarr_main_document_root='/var/www/html/htdocs';
+\$dolibarr_main_data_root='/var/www/documents';
+EOF
+    chown www-data:www-data /var/www/html/htdocs/conf/conf.php
+    chmod 666 /var/www/html/htdocs/conf/conf.php
+    echo "✅ conf.php created with initial content"
+fi
+
+# 6️⃣ DÉMARRER APACHE IMMÉDIATEMENT (avant le test de connexion)
 echo "🌐 Starting Apache web server..."
 apache2-foreground &
 APACHE_PID=$!
@@ -63,7 +79,7 @@ APACHE_PID=$!
 sleep 3
 echo "✅ Apache is starting (PID: $APACHE_PID)..."
 
-# 6️⃣ Test database connection en arrière-plan (ne bloque pas Apache)
+# 7️⃣ Test database connection en arrière-plan (ne bloque pas Apache)
 (
     echo "🔍 Testing database connectivity in background..."
     sleep 5  # Donner le temps à Apache de bien démarrer
@@ -115,6 +131,6 @@ echo "✅ Apache is starting (PID: $APACHE_PID)..."
     fi
 ) &
 
-# 7️⃣ Attendre Apache (processus principal)
+# 8️⃣ Attendre Apache (processus principal)
 echo "🎯 Dolibarr is ready! Waiting for Apache..."
 wait $APACHE_PID
