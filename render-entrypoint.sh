@@ -26,7 +26,7 @@ if [ -z "$DOLI_DB_USER" ]; then
     exit 1
 fi
 
-if [ -z "$DOLI_DB_PASSWORD" ]; then
+if [ -z "$DOLI_DB_PASS" ]; then
     echo "❌ DOLI_DB_PASSWORD is not set"
     exit 1
 fi
