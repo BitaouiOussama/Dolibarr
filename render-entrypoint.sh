@@ -11,7 +11,6 @@ if [ -n "$MYSQL_SSL_CA" ]; then
     chmod 600 /ca.pem
     echo "✅ SSL certificate setup complete"
 
-    # Copy to PHP conf directory for MySQL SSL
     mkdir -p /usr/local/etc/php/conf.d
     cp /ca.pem /usr/local/etc/php/conf.d/ca.pem
 
@@ -23,26 +22,22 @@ pdo_mysql.default_socket = ""
 EOF
 fi
 
-# 2️⃣ Set environment variables for Dolibarr
+# 2️⃣ Dolibarr environment variables
 export DOLI_DB_TYPE="${DOLI_DB_TYPE:-mysqli}"
 export DOLI_DB_PORT="${DOLI_DB_PORT:-17031}"
 export DOLI_INSTALL_AUTO="${DOLI_INSTALL_AUTO:-1}"
 export DOLI_PROD="${DOLI_PROD:-1}"
-export DOLI_URL_ROOT="${DOLI_URL_ROOT:- https://dolibarr-68ch.onrender.com}"
+export DOLI_URL_ROOT="${DOLI_URL_ROOT:-https://dolibarr-68ch.onrender.com}"
 
-# 3️⃣ Prepare directories
+# 3️⃣ Prepare Dolibarr directories
 echo "📁 Preparing Dolibarr directories..."
 mkdir -p /var/www/html/conf
 mkdir -p /var/www/documents
+chown -R www-data:www-data /var/www/html /var/www/documents
+chmod -R 777 /var/www/html/conf /var/www/documents
 
-chown -R www-data:www-data /var/www/html
-chown -R www-data:www-data /var/www/documents
-chmod -R 777 /var/www/html/conf
-chmod -R 777 /var/www/documents
-
-# 4️⃣ Generate Dolibarr conf.php dynamically
+# 4️⃣ Generate conf.php dynamically
 echo "🛠️ Generating /var/www/html/conf/conf.php..."
-
 cat > /var/www/html/conf/conf.php << EOF
 <?php
 \$dolibarr_main_url_root='${DOLI_URL_ROOT}';
@@ -64,50 +59,42 @@ EOF
 
 chown www-data:www-data /var/www/html/conf/conf.php
 chmod 666 /var/www/html/conf/conf.php
+echo "✅ conf.php created successfully."
 
-echo "✅ conf.php created successfully:"
-ls -l /var/www/html/conf/conf.php
-
-# 5️⃣ Start Apache
+# 5️⃣ Start Apache in background
 echo "🌐 Starting Apache web server..."
 apache2-foreground & 
 APACHE_PID=$!
-
 sleep 5
 echo "✅ Apache is running (PID: $APACHE_PID)"
 
-# 6️⃣ Test database connection (non-blocking)
-(
-    echo "🔍 Testing MySQL connectivity to Aiven..."
-    if command -v mysql &> /dev/null; then
-        if [ -f "/ca.pem" ]; then
-            echo "🧪 Testing SSL connection..."
-            timeout 15 mysql \
-                --host="$DOLI_DB_HOST" \
-                --port="$DOLI_DB_PORT" \
-                --user="$DOLI_DB_USER" \
-                --password="$DOLI_DB_PASS" \
-                --ssl-ca=/ca.pem \
-                --ssl-mode=REQUIRED \
-                --connect-timeout=10 \
-                --execute="SELECT 'SSL Connection SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && \
-            echo "✅ Database connection successful (SSL)" || \
-            echo "❌ Database SSL connection failed"
-        else
-            echo "🧪 Testing non-SSL connection..."
-            timeout 15 mysql \
-                --host="$DOLI_DB_HOST" \
-                --port="$DOLI_DB_PORT" \
-                --user="$DOLI_DB_USER" \
-                --password="$DOLI_DB_PASS" \
-                --connect-timeout=10 \
-                --execute="SELECT 'Connection SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && \
-            echo "✅ Database connection successful (non-SSL)" || \
-            echo "❌ Database connection failed"
-        fi
-    fi
-) &
+# 6️⃣ Check if Dolibarr database is initialized
+echo "🔍 Checking if Dolibarr DB is empty..."
+TABLE_COUNT=$(mysql --host="$DOLI_DB_HOST" \
+                    --port="$DOLI_DB_PORT" \
+                    --user="$DOLI_DB_USER" \
+                    --password="$DOLI_DB_PASS" \
+                    --silent --skip-column-names \
+                    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DOLI_DB_NAME}';" || echo "0")
 
-# 7️⃣ Wait for Apache (keep container alive)
-echo "🎯 Dolibarr is ready on $DOLI_URL_ROOT"
+if [ "$TABLE_COUNT" = "0" ]; then
+    echo "⚙️ Database is empty — running Dolibarr CLI installer..."
+    php /var/www/html/htdocs/install/cli_install.php \
+        --db_host="$DOLI_DB_HOST" \
+        --db_port="$DOLI_DB_PORT" \
+        --db_user="$DOLI_DB_USER" \
+        --db_pass="$DOLI_DB_PASS" \
+        --db_name="$DOLI_DB_NAME" \
+        --admin_login="admin" \
+        --admin_pass="admin" \
+        --force_install=1 \
+        --noremove=1 \
+        --disable_utf8mb4=0 || echo "⚠️ Dolibarr installer may have already run."
+    echo "✅ Dolibarr initialized (admin/admin)"
+else
+    echo "✅ Database already contains $TABLE_COUNT tables — skipping installation."
+fi
+
+# 7️⃣ Keep container alive
+echo "🎯 Dolibarr is ready at $DOLI_URL_ROOT"
 wait $APACHE_PID
