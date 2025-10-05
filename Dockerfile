@@ -1,7 +1,7 @@
-# Use the official Dolibarr image
-FROM dolibarr/dolibarr:20
+# Use the official Dolibarr image as base
+FROM dolibarr/dolibarr:21
 
-# Install mysql-client for connection testing
+# Install mysql-client (for connection testing)
 RUN apt-get update && \
     apt-get install -y default-mysql-client && \
     rm -rf /var/lib/apt/lists/*
@@ -10,12 +10,11 @@ RUN apt-get update && \
 COPY render-entrypoint.sh /render-entrypoint.sh
 RUN chmod +x /render-entrypoint.sh
 
-# Set the working directory
+# Set working directory
 WORKDIR /var/www/html
 
-# Expose port 80
+# Expose HTTP port
 EXPOSE 80
 
-# Use your custom entrypoint
+# Use your custom entrypoint (replaces Dolibarr’s default)
 ENTRYPOINT ["/render-entrypoint.sh"]
-CMD []

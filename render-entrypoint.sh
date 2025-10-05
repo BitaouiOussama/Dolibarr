@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting Dolibarr with Aiven database..."
+echo "🚀 Starting Dolibarr with Aiven MySQL database..."
 
 # 1️⃣ Handle SSL certificate for Aiven
 if [ -n "$MYSQL_SSL_CA" ]; then
@@ -10,25 +10,11 @@ if [ -n "$MYSQL_SSL_CA" ]; then
     chown www-data:www-data /ca.pem
     chmod 600 /ca.pem
     echo "✅ SSL certificate setup complete"
-    
-    # Also copy to PHP certs directory
+
+    # Copy to PHP conf directory for MySQL SSL
     mkdir -p /usr/local/etc/php/conf.d
     cp /ca.pem /usr/local/etc/php/conf.d/ca.pem
-fi
 
-# 2️⃣ Set your Aiven database credentials
-export DOLI_DB_HOST="${DOLI_DB_HOST}"
-export DOLI_DB_USER="${DOLI_DB_USER}" 
-export DOLI_DB_PASS="${DOLI_DB_PASS}"
-export DOLI_DB_NAME="${DOLI_DB_NAME}"
-export DOLI_DB_HOST_PORT="${DOLI_DB_PORT:-17031}"
-export DOLI_DB_TYPE="${DOLI_DB_TYPE:-mysqli}"
-export DOLI_INSTALL_AUTO="${DOLI_INSTALL_AUTO:-1}"
-export DOLI_PROD="${DOLI_PROD:-1}"
-
-# 3️⃣ Create a custom PHP configuration for MySQL SSL
-if [ -f "/ca.pem" ]; then
-    echo "🔧 Configuring PHP for MySQL SSL..."
     cat > /usr/local/etc/php/conf.d/mysql-ssl.ini << 'EOF'
 ; MySQL SSL Configuration for Aiven
 mysqli.ssl_ca = "/ca.pem"
@@ -37,119 +23,91 @@ pdo_mysql.default_socket = ""
 EOF
 fi
 
-# 4️⃣ Créer la configuration Dolibarr en avance avec les bonnes permissions
-echo "📄 Creating Dolibarr configuration directory..."
-mkdir -p /var/www/html/htdocs/conf
+# 2️⃣ Set environment variables for Dolibarr
+export DOLI_DB_TYPE="${DOLI_DB_TYPE:-mysqli}"
+export DOLI_DB_PORT="${DOLI_DB_PORT:-17031}"
+export DOLI_INSTALL_AUTO="${DOLI_INSTALL_AUTO:-1}"
+export DOLI_PROD="${DOLI_PROD:-1}"
+export DOLI_URL_ROOT="${DOLI_URL_ROOT:- https://dolibarr-68ch.onrender.com}"
 
-# Créer le fichier conf.php avec du contenu initial
-cat > /var/www/html/htdocs/conf/conf.php << 'EOF'
-<?php
-// Dolibarr configuration file
-// This file will be completed by Dolibarr install process
-EOF
-
-# Donner les permissions maximales
-chown -R www-data:www-data /var/www/html
-chown -R www-data:www-data /var/www/html/htdocs
-chown -R www-data:www-data /var/www/html/htdocs/conf
-chown -R www-data:www-data /var/www/html/htdocs/conf/conf.php
-chmod 777 /var/www/html
-chmod 777 /var/www/html/htdocs
-chmod 777 /var/www/html/htdocs/conf
-chmod 777 /var/www/html/htdocs/conf/conf.php
-
-# Créer aussi le répertoire documents
+# 3️⃣ Prepare directories
+echo "📁 Preparing Dolibarr directories..."
+mkdir -p /var/www/html/conf
 mkdir -p /var/www/documents
+
+chown -R www-data:www-data /var/www/html
 chown -R www-data:www-data /var/www/documents
-chmod 777 /var/www/documents
+chmod -R 777 /var/www/html/conf
+chmod -R 777 /var/www/documents
 
-# Vérifier que le fichier existe bien
-if [ -f "/var/www/html/htdocs/conf/conf.php" ]; then
-    echo "✅ conf.php created successfully"
-    ls -la /var/www/html/htdocs/conf/conf.php
-else
-    echo "❌ Failed to create conf.php"
-fi
+# 4️⃣ Generate Dolibarr conf.php dynamically
+echo "🛠️ Generating /var/www/html/conf/conf.php..."
 
-echo "✅ Directories and permissions configured"
-
-# 5️⃣ Option pour forcer la création du fichier conf.php avec du contenu initial
-if [ "$DOLI_INSTALL_FORCE_CREATE_CONF" = "1" ]; then
-    echo "🔧 Force creating conf.php with initial configuration..."
-    cat > /var/www/html/htdocs/conf/conf.php << EOF
+cat > /var/www/html/conf/conf.php << EOF
 <?php
-// Dolibarr configuration file
-// This file will be completed by Dolibarr install process
-\$dolibarr_main_url_root='${DOLI_URL_ROOT:-https://dolibarr-68ch.onrender.com}';
-\$dolibarr_main_document_root='/var/www/html/htdocs';
+\$dolibarr_main_url_root='${DOLI_URL_ROOT}';
+\$dolibarr_main_document_root='/var/www/html';
+\$dolibarr_main_url_root_alt='/custom';
+\$dolibarr_main_document_root_alt='/var/www/html/custom';
 \$dolibarr_main_data_root='/var/www/documents';
+\$dolibarr_main_db_host='${DOLI_DB_HOST}';
+\$dolibarr_main_db_port='${DOLI_DB_PORT}';
+\$dolibarr_main_db_name='${DOLI_DB_NAME}';
+\$dolibarr_main_db_user='${DOLI_DB_USER}';
+\$dolibarr_main_db_pass='${DOLI_DB_PASS}';
+\$dolibarr_main_db_type='${DOLI_DB_TYPE}';
+\$dolibarr_main_db_prefix='llx_';
+\$dolibarr_main_authentication='dolibarr';
+\$dolibarr_main_prod=1;
+\$dolibarr_main_instance_unique_id='myinstanceuniquekey';
 EOF
-    chown www-data:www-data /var/www/html/htdocs/conf/conf.php
-    chmod 666 /var/www/html/htdocs/conf/conf.php
-    echo "✅ conf.php created with initial content"
-fi
 
-# 6️⃣ DÉMARRER APACHE IMMÉDIATEMENT (avant le test de connexion)
+chown www-data:www-data /var/www/html/conf/conf.php
+chmod 666 /var/www/html/conf/conf.php
+
+echo "✅ conf.php created successfully:"
+ls -l /var/www/html/conf/conf.php
+
+# 5️⃣ Start Apache
 echo "🌐 Starting Apache web server..."
-apache2-foreground &
+apache2-foreground & 
 APACHE_PID=$!
 
-# Attendre qu'Apache soit prêt
-sleep 3
-echo "✅ Apache is starting (PID: $APACHE_PID)..."
+sleep 5
+echo "✅ Apache is running (PID: $APACHE_PID)"
 
-# 7️⃣ Test database connection en arrière-plan (ne bloque pas Apache)
+# 6️⃣ Test database connection (non-blocking)
 (
-    echo "🔍 Testing database connectivity in background..."
-    sleep 5  # Donner le temps à Apache de bien démarrer
-    
-    if command -v mysql &> /dev/null && [ -n "$DOLI_DB_HOST" ]; then
-        echo "Testing connection to: $DOLI_DB_HOST:$DOLI_DB_HOST_PORT"
-        
+    echo "🔍 Testing MySQL connectivity to Aiven..."
+    if command -v mysql &> /dev/null; then
         if [ -f "/ca.pem" ]; then
-            # Test with SSL
+            echo "🧪 Testing SSL connection..."
             timeout 15 mysql \
                 --host="$DOLI_DB_HOST" \
+                --port="$DOLI_DB_PORT" \
                 --user="$DOLI_DB_USER" \
                 --password="$DOLI_DB_PASS" \
-                --port="$DOLI_DB_HOST_PORT" \
                 --ssl-ca=/ca.pem \
                 --ssl-mode=REQUIRED \
                 --connect-timeout=10 \
-                --execute="SELECT 'SSL Connection: SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && {
-                echo "✅ Database connection successful with SSL"
-            } || {
-                echo "⚠️ SSL Connection failed, trying without SSL..."
-                timeout 15 mysql \
-                    --host="$DOLI_DB_HOST" \
-                    --user="$DOLI_DB_USER" \
-                    --password="$DOLI_DB_PASS" \
-                    --port="$DOLI_DB_HOST_PORT" \
-                    --connect-timeout=10 \
-                    --execute="SELECT 'Non-SSL Connection: SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && {
-                    echo "✅ Database connection successful without SSL"
-                } || {
-                    echo "❌ Database connection failed"
-                    echo "💡 Check your Aiven database credentials and firewall rules"
-                }
-            }
+                --execute="SELECT 'SSL Connection SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && \
+            echo "✅ Database connection successful (SSL)" || \
+            echo "❌ Database SSL connection failed"
         else
-            # Test without SSL
+            echo "🧪 Testing non-SSL connection..."
             timeout 15 mysql \
                 --host="$DOLI_DB_HOST" \
+                --port="$DOLI_DB_PORT" \
                 --user="$DOLI_DB_USER" \
                 --password="$DOLI_DB_PASS" \
-                --port="$DOLI_DB_HOST_PORT" \
                 --connect-timeout=10 \
-                --execute="SELECT 'Connection: SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && {
-                echo "✅ Database connection successful"
-            } || {
-                echo "❌ Database connection failed"
-            }
+                --execute="SELECT 'Connection SUCCESS' AS status; USE $DOLI_DB_NAME;" 2>&1 && \
+            echo "✅ Database connection successful (non-SSL)" || \
+            echo "❌ Database connection failed"
         fi
     fi
 ) &
 
-# 8️⃣ Attendre Apache (processus principal)
-echo "🎯 Dolibarr is ready! Waiting for Apache..."
+# 7️⃣ Wait for Apache (keep container alive)
+echo "🎯 Dolibarr is ready on $DOLI_URL_ROOT"
 wait $APACHE_PID
